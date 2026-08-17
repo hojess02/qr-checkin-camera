@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      margin: 0;
+      padding: 16px;
+      text-align: center;
+    }
+    #reader { max-width: 420px; margin: 0 auto; border-radius: 12px; overflow: hidden; }
+    #msg { margin-top: 12px; font-size: 14px; opacity: 0.8; min-height: 20px; }
+    #last-sent { margin-top: 8px; font-size: 16px; font-weight: 700; color: #4ade80; }
+  </style>
+</head>
+<body>
+  <h2>📷 Scan QR</h2>
+  <div id="reader"></div>
+  <div id="msg">Starting camera...</div>
+  <div id="last-sent"></div>
+
+  <script>
+    var lastCode = null;
+    var lastTime = 0;
+
+    function sendToOpener(code) {
+      var now = Date.now();
+      // debounce: ignore identical scans within 3s (camera keeps re-reading the same code every frame)
+      if (code === lastCode && (now - lastTime) < 3000) return;
+      lastCode = code;
+      lastTime = now;
+
+      if (window.opener) {
+        window.opener.postMessage({ type: 'qr-scan', code: code }, '*');
+        document.getElementById('last-sent').textContent = 'Sent: ' + code;
+      } else {
+        document.getElementById('msg').textContent = 'No parent window found — open this via the Start Scanning button, not directly.';
+      }
+    }
+
+    var qrScanner = new Html5Qrcode("reader");
+    qrScanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      function(decodedText) { sendToOpener(decodedText); },
+      function() { /* ignore per-frame misses */ }
+    ).then(function() {
+      document.getElementById('msg').textContent = 'Point camera at a QR code';
+    }).catch(function(err) {
+      document.getElementById('msg').textContent = 'Camera error: ' + err;
+    });
+  </script>
+</body>
+</html>
